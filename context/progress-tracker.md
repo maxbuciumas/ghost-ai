@@ -5,14 +5,19 @@ change.
 
 ## Current Phase
 
-- Complete: editor home and project context dialogs (`feature-specs/04-context-dialogs.md`).
+- Prisma implementation and local checks complete; applying the first migration remains blocked by the native schema engine connection failure (`feature-specs/05-prisma.md`).
 
 ## Current Goal
 
-- Editor home, create/rename/delete dialogs, owned-project sidebar actions, and mobile sidebar backdrop are implemented using mock data only.
+- Apply the generated initial migration using Prisma Migrate once its native engine can connect. Models, the cached client, client generation, and the production build are verified.
 
 ## Completed
 
+- Added `prisma/models/project.prisma` with ProjectStatus (DRAFT/ARCHIVED), Project, and ProjectCollaborator. Includes only the specified metadata plus primary keys and relation fields, owner/date and email/project-date indexes, project/email uniqueness, and cascading collaborator deletion. Clerk owner IDs remain strings; no local User model was introduced.
+- Added `lib/prisma.ts` exporting a shared Prisma client, selecting Accelerate for `prisma+postgres://` and `PrismaPg` otherwise, with development global caching and an explicit missing-DATABASE_URL error. Installed `@prisma/extension-accelerate` for the specified branch.
+- Renamed the pre-existing `prisma7.config.ts` to the CLI-discovered `prisma.config.ts`, preserved the multi-file schema/client output setup, and loaded `.env.local` before `.env` without overriding process environment values.
+- Formatted the schema, generated Prisma Client 7.10.1, and generated/reviewed `prisma/migrations/20261116000000_init_projects/migration.sql` with Prisma's offline schema diff. Added the PostgreSQL migration lock file.
+- Verification passed: schema validation/formatting, ESLint, TypeScript, production build, direct application-client `SELECT 1`, singleton reuse after module reload, and Accelerate extension initialization/caching. Live Accelerate queries were not tested because no Accelerate credentials are configured.
 - Fixed project-name validation: create and rename reject names that normalize to an empty slug, including punctuation-only/unsupported-character-only input. The form shows an accessible inline error and disables submission; the hook also rejects invalid submission directly.
 - Validation regression checks passed: TypeScript, ESLint, production build, and isolated browser tests for `___`, `---`, punctuation, whitespace, emoji-only and unsupported-script-only names, direct form submission, rename Enter submission, valid-name recovery, and unaffected delete confirmation.
 - Implemented the exact editor home heading and description with a Plus/New Project button and no enclosing card, reusing the editor layout and retaining the page's server-side auth check.
@@ -43,19 +48,20 @@ change.
 
 ## In Progress
 
-- None.
+- Apply the initial migration. `prisma migrate dev --name init_projects`, `prisma migrate deploy`, and `prisma migrate status` fail through the native schema engine with P1001 (or a generic schema-engine error), including network-enabled retries and a 30-second timeout. TCP connectivity and read-only queries through `pg` and the application Prisma client succeed. The exact engine connection failure is unresolved; no reset or manual migration-history changes were attempted.
 
 ## Next Up
 
 - Manually verify completion of browser sign-in/sign-up, the authenticated `/` redirect, profile settings, and logout against the connected Clerk instance. Signed-out browser navigation and auth form rendering have passed automated checks.
-- Select the next feature unit from the project specs.
+- Resolve the native schema engine's database connection failure, run `npx --no-install prisma migrate deploy`, then verify `prisma migrate status` and read both project tables through the application client before marking feature 05 complete.
 
 ## Open Questions
 
-- No blocking questions for this mock UI unit. Real project APIs, persistence, and project workspace navigation remain outside this spec.
+- What prevents the native Prisma schema engine from connecting while Node's PostgreSQL driver succeeds? Applying the first migration is the remaining blocker for feature 05. Real project APIs and persistence wiring remain outside this spec.
 
 ## Architecture Decisions
 
+- Feature 05 adds database infrastructure only. Existing project dialogs remain mock-only. Project ownership uses Clerk IDs without a local User table; canvasJsonPath is nullable until future blob persistence is implemented.
 - For this unit, create/rename/delete update a local mock project collection only and reset on reload. No API calls, database changes, or browser persistence are introduced. Project names are trimmed and must produce a nonempty slug; slug previews use lowercase ASCII letters/digits separated by hyphens.
 - Use the generated shadcn/ui Radix Nova primitives unchanged; map their semantic CSS variables to the documented dark palette so app-level styling stays consistent.
 - Keep editor composition in `components/editor/`; reuse the existing shadcn primitives unchanged. New Project now opens the local mock Create Project dialog.

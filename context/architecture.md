@@ -29,6 +29,14 @@
 - Canvas content and Markdown output are stored in and retrieved from Vercel Blob.
 - The blob URL is stored in the database (`canvasJsonPath`, `filePath`) as the reference to the artifact.
 
+## Prisma Infrastructure
+
+- Prisma ORM 7 loads the multi-file schema from `prisma/`; project models live in `prisma/models/project.prisma`. The client is generated to the ignored `app/generated/prisma` directory.
+- `Project` stores the Clerk owner ID as a string, project metadata, DRAFT/ARCHIVED status, an optional future canvas blob URL, and timestamps. `ProjectCollaborator` stores project membership by email; project deletion cascades to its collaborator records.
+- `lib/prisma.ts` exports the shared `prisma` instance. `prisma+postgres://` URLs use Accelerate; other URLs use `@prisma/adapter-pg`. Development hot reloads reuse the instance cached on `globalThis`.
+- `prisma.config.ts` loads `.env.local` before `.env`, preserving existing process environment values. CLI schema and migration operations use the same local database selection as the app. Run `prisma generate` explicitly after schema changes and before building a fresh checkout.
+- Project dialogs continue to use mock data; this infrastructure unit does not connect UI operations to the database.
+
 ## Auth and Collaboration Model
 
 - The root layout provides Clerk with a token-based dark theme. Public sign-in/sign-up pages share `app/(auth)/layout.tsx`; the workspace shell lives in `app/editor/layout.tsx`.
