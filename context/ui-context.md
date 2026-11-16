@@ -103,9 +103,9 @@ shadcn/ui on top of Tailwind. No custom design system. Components live in `compo
 ### Editor Chrome Composition
 
 - `components/editor/editor-shell.tsx` owns sidebar visibility and keeps the canvas full-size beneath the floating sidebar.
-- `app/editor/layout.tsx` composes `EditorShell` around editor page content; public auth pages use a separate layout.
+- Editor pages compose the server-loaded `AuthenticatedEditor` and `EditorShell`; public auth pages use a separate layout.
 - `EditorNavbar` accepts `isSidebarOpen`, `onToggleSidebar`, and optional center content; its right section contains Clerk's default `UserButton`.
-- `ProjectSidebar` accepts `isOpen` and `onClose`; the shared mock-project dialog provider supplies its create/rename/delete actions and project lists. Only owned projects have mutation controls. A mobile-only backdrop closes the sidebar on outside taps.
+- `ProjectSidebar` accepts `isOpen` and `onClose`; the shared project dialog provider supplies real server-loaded lists and create/rename/delete actions. Project names link to their workspaces. Only owned projects have mutation controls. A mobile-only backdrop closes the sidebar on outside taps.
 - `EditorHome` renders the specified centered heading, description, and New Project button without a card. `ProjectDialogsProvider` shares the dedicated hook's state between the home and sidebar.
 
 ### Dialog Pattern
@@ -116,7 +116,7 @@ For the first feature dialog, compose the existing shadcn primitives directly:
 - Style `DialogContent` with `rounded-3xl border border-surface-border bg-elevated text-copy-primary`.
 - Put `DialogTitle` and `DialogDescription` inside `DialogHeader`; use `text-copy-muted` for the description.
 - Put action buttons inside `DialogFooter`, styled with `rounded-b-3xl border-surface-border bg-surface`.
-- Keep the generated primitives unchanged. Project dialogs compose these primitives with a single controlled form: create shows a live slug, rename prefills and focuses the name, and delete shows only a destructive confirmation.
+- Keep the generated primitives unchanged. Project dialogs compose these primitives with a single controlled form: create shows the exact room ID (slug plus unique suffix), rename prefills and focuses the name, and delete shows only a destructive confirmation. Failed requests display an accessible inline error and preserve input for retry.
 
 ## Authentication Pages
 

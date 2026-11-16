@@ -35,7 +35,7 @@
 - `Project` stores the Clerk owner ID as a string, project metadata, DRAFT/ARCHIVED status, an optional future canvas blob URL, and timestamps. `ProjectCollaborator` stores project membership by email; project deletion cascades to its collaborator records.
 - `lib/prisma.ts` exports the shared `prisma` instance. `prisma+postgres://` URLs use Accelerate; other URLs use `@prisma/adapter-pg`. Development hot reloads reuse the instance cached on `globalThis`.
 - `prisma.config.ts` loads `.env.local` before `.env`, preserving existing process environment values. CLI schema and migration operations use the same local database selection as the app. Run `prisma generate` explicitly after schema changes and before building a fresh checkout.
-- Project dialogs continue to use mock data; this infrastructure unit does not connect UI operations to the database.
+- Project APIs list/create owned projects and rename/delete only after verifying the Clerk owner ID. Create accepts a validated slug plus eight hexadecimal characters as an explicit ID, per the feature 07 clarification; callers omitting it retain the schema's cuid default. Shared server-side project queries match verified Clerk emails case-insensitively and exclude owned projects.
 
 ## Auth and Collaboration Model
 
@@ -48,11 +48,12 @@
 - Only the owner or a collaborator can mutate project resources.
 - Liveblocks room tokens are issued only after verifying project membership.
 
-## Mock Project Dialogs
+## Project Lists and Actions
 
-- The editor home and sidebar share a client-side project dialog provider. A dedicated `hooks/use-project-dialogs.ts` hook owns dialog, form, loading, and temporary mock collection state.
-- Create, rename, and delete only update mock projects in memory. Reloading restores the fixtures; no requests or persistence are used for these operations.
-- Owned mock projects expose rename/delete actions; collaborator projects do not. These UI checks are not a substitute for future server authorization.
+- The editor home remains a Server Component. `AuthenticatedEditor` fetches owned/shared lists using `lib/projects.ts` and passes serializable summaries through `EditorShell` and the shared dialog provider to the sidebar. Initial load has no client fetch. The shell is composed at the page level so mutation refreshes reload both lists.
+- `hooks/use-project-actions.ts` owns dialog, input, request, pending, and error state. Create generates a stable slug/suffix preview, persists that exact ID through POST, and navigates to `/editor/[projectId]`. This ID is the future Liveblocks room identity; renaming only changes the display name.
+- Rename refreshes server data. Delete replaces the active workspace with `/editor`, otherwise refreshing. Errors leave the dialog open for retry. Only owned projects expose mutation controls; API ownership enforcement remains authoritative.
+- `/editor/[projectId]` supplies a minimal project workspace destination and verifies owner or verified-email collaborator membership. Canvas and Liveblocks functionality remain deferred.
 
 ## Starter System Designs
 
