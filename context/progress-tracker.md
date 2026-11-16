@@ -5,14 +5,26 @@ change.
 
 ## Current Phase
 
-- Prisma implementation and local checks complete; applying the first migration remains blocked by the native schema engine connection failure (`feature-specs/05-prisma.md`).
+- Features 06 and 07 implemented; the initial database schema is now applied and live Prisma reads and transactional CRUD verification pass. The missing-table runtime error is resolved. Native Prisma CLI connectivity remains unresolved.
 
 ## Current Goal
 
-- Apply the generated initial migration using Prisma Migrate once its native engine can connect. Models, the cached client, client generation, and the production build are verified.
+- Verify authenticated editor flows in the browser. Restore native Prisma CLI connectivity before applying future migrations with Migrate.
 
 ## Completed
 
+- Made PostgreSQL TLS verification explicit by changing only `DATABASE_URL`'s `sslmode=require` to `sslmode=verify-full` in ignored `.env.local` and `.env`. This preserves the driver's current certificate/hostname verification behavior and removes its SSL compatibility warning. Restart the development server to recreate its cached connection pool with the new URL.
+- Verified the updated URL with a live PostgreSQL connection and Project-table read without the SSL warning. The first connection timed out; the bounded retry succeeded.
+- Resolved the reported `public.Project` missing-table error by applying the exact saved initial migration through `pg` in a transaction after checking that project tables, enum, and populated migration history were absent. Recorded the migration in `_prisma_migrations` using Prisma's documented table format, SHA-256 checksum, completion timestamp, and step count; checksum and completion were verified. No existing project data was modified or reset.
+- Live verification passed: both project tables read through the application's Prisma singleton; a bounded transaction using the same generated Prisma client and PostgreSQL adapter passed create/list/rename/delete, collaborator cascade, and rollback cleanup. No verification projects were retained. Initial verification connections stalled; bounded connection and transaction-start timeouts allowed the CRUD check to complete.
+- Native engine diagnosis: Node driver connections succeed, including all resolved IPv4 endpoints with verified TLS. Native `migrate status` continues to fail with P1001, including three retries after schema application; a temporary localhost TCP relay also failed. No saved credentials, SSL settings, or connection URLs were changed. The schema application used the Node driver rather than a successful Prisma Migrate invocation.
+- Feature 07: replaced mock collections with server-loaded owned/shared project summaries, using shared Prisma data helpers and verified Clerk email membership. Added `use-project-actions.ts` for real create/rename/delete requests, pending/error state, duplicate submission protection, navigation, and refresh. Removed the unused mock data and mock hook.
+- Feature 07: create previews and persists the exact slug plus eight-character random suffix ID; project and future room identities are identical. Rename preserves identity. Sidebar project links open an authorized minimal `/editor/[projectId]` destination; deleting the active project returns to `/editor`.
+- Features 06/07 verification passed: production build, ESLint, and isolated tests executing the actual API handlers and actions hook. Checks cover 401/403/404/400, owned-list isolation, default names, slug-ID persistence/collisions, no initial client fetch, create navigation, rename prefill/refresh, active versus inactive delete, duplicate submission prevention, and retained dialog errors. Auth and database boundaries are stubbed; authenticated browser flows and live CRUD have not been verified.
+- Read-only network-enabled database verification confirmed both `Project` and `ProjectCollaborator` tables are absent. Retrying `prisma migrate deploy` with network access still fails with a generic schema-engine error. No destructive reset or manual migration-history edits were performed.
+- Feature 06: added GET/POST `/api/projects` and PATCH/DELETE `/api/projects/[projectId]`. Clerk identity supplies ownerId; missing create names default to Untitled Project, IDs use Prisma defaults, mutations require ownership, and project APIs return JSON 401/403 rather than auth redirects. Invalid JSON/names return 400 and missing projects return 404.
+- Feature 06 verification: production build and isolated tests of the actual handlers passed authentication, ownership, list isolation, ID/owner injection resistance, default names, invalid inputs, rename, delete, and missing records. The database boundary was stubbed in these tests; live database verification remains separate.
+- Fixed the existing Prisma singleton's incompatible union query signatures by exposing the common PrismaClient API for both direct and Accelerate clients; runtime connection selection is unchanged.
 - Added `prisma/models/project.prisma` with ProjectStatus (DRAFT/ARCHIVED), Project, and ProjectCollaborator. Includes only the specified metadata plus primary keys and relation fields, owner/date and email/project-date indexes, project/email uniqueness, and cascading collaborator deletion. Clerk owner IDs remain strings; no local User model was introduced.
 - Added `lib/prisma.ts` exporting a shared Prisma client, selecting Accelerate for `prisma+postgres://` and `PrismaPg` otherwise, with development global caching and an explicit missing-DATABASE_URL error. Installed `@prisma/extension-accelerate` for the specified branch.
 - Renamed the pre-existing `prisma7.config.ts` to the CLI-discovered `prisma.config.ts`, preserved the multi-file schema/client output setup, and loaded `.env.local` before `.env` without overriding process environment values.
@@ -48,23 +60,24 @@ change.
 
 ## In Progress
 
-- Apply the initial migration. `prisma migrate dev --name init_projects`, `prisma migrate deploy`, and `prisma migrate status` fail through the native schema engine with P1001 (or a generic schema-engine error), including network-enabled retries and a 30-second timeout. TCP connectivity and read-only queries through `pg` and the application Prisma client succeed. The exact engine connection failure is unresolved; no reset or manual migration-history changes were attempted.
+- Restore native Prisma schema-engine connectivity for future migrations. The initial schema and migration history are now applied through the Node driver; native CLI status remains unverified because the engine still returns P1001.
 
 ## Next Up
 
 - Manually verify completion of browser sign-in/sign-up, the authenticated `/` redirect, profile settings, and logout against the connected Clerk instance. Signed-out browser navigation and auth form rendering have passed automated checks.
-- Resolve the native schema engine's database connection failure, run `npx --no-install prisma migrate deploy`, then verify `prisma migrate status` and read both project tables through the application client before marking feature 05 complete.
+- Resolve the native schema engine's database connection failure, then verify `prisma migrate status` recognizes the recorded initial migration. Schema application and live client reads/CRUD have passed; native CLI verification remains outstanding.
 
 ## Open Questions
 
-- What prevents the native Prisma schema engine from connecting while Node's PostgreSQL driver succeeds? Applying the first migration is the remaining blocker for feature 05. Real project APIs and persistence wiring remain outside this spec.
+- Resolved feature 06/07 ID ambiguity: user explicitly selected slug plus suffix as both project and room ID. POST accepts this validated ID; requests without an ID still use Prisma's default. No schema changes or sequential IDs were added.
+- What prevents the native Prisma schema engine from connecting while Node's PostgreSQL driver succeeds? This no longer blocks the editor's initial schema, but must be resolved for future native CLI migrations.
 
 ## Architecture Decisions
 
 - Feature 05 adds database infrastructure only. Existing project dialogs remain mock-only. Project ownership uses Clerk IDs without a local User table; canvasJsonPath is nullable until future blob persistence is implemented.
-- For this unit, create/rename/delete update a local mock project collection only and reset on reload. No API calls, database changes, or browser persistence are introduced. Project names are trimmed and must produce a nonempty slug; slug previews use lowercase ASCII letters/digits separated by hyphens.
+- Features 06/07 supersede the mock-dialog unit: project actions now call real APIs and server components reload persisted lists. Project names are trimmed and create/rename forms require a nonempty slug; the create room ID adds a stable random suffix and remains unchanged on rename.
 - Use the generated shadcn/ui Radix Nova primitives unchanged; map their semantic CSS variables to the documented dark palette so app-level styling stays consistent.
-- Keep editor composition in `components/editor/`; reuse the existing shadcn primitives unchanged. New Project now opens the local mock Create Project dialog.
+- Keep editor composition in `components/editor/`; reuse the existing shadcn primitives unchanged. New Project opens the shared Create Project dialog backed by the real API.
 - Keep shared sidebar state in `EditorShell`. Defer a shared dialog wrapper until actual dialog usage establishes its requirements.
 - Default protection in `proxy.ts` implements the auth spec; resources also enforce authentication where they execute. Future protected pages, handlers, and Server Actions must perform their own auth and authorization checks.
 

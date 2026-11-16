@@ -6,9 +6,10 @@ import { LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useProjectDialogs } from "@/hooks/use-project-dialogs";
+import { useProjectActions } from "@/hooks/use-project-actions";
+import type { ProjectLists } from "@/lib/project-types";
 
-const ProjectDialogsContext = createContext<ReturnType<typeof useProjectDialogs> | null>(null);
+const ProjectDialogsContext = createContext<ReturnType<typeof useProjectActions> | null>(null);
 
 export function useProjectDialogContext() {
   const context = useContext(ProjectDialogsContext);
@@ -16,16 +17,16 @@ export function useProjectDialogContext() {
   return context;
 }
 
-interface ProjectDialogsProviderProps {
+interface ProjectDialogsProviderProps extends ProjectLists {
   children: ReactNode;
 }
 
-export function ProjectDialogsProvider({ children }: ProjectDialogsProviderProps) {
-  const state = useProjectDialogs();
+export function ProjectDialogsProvider({ children, ownedProjects, sharedProjects }: ProjectDialogsProviderProps) {
+  const state = useProjectActions({ ownedProjects, sharedProjects });
   const nameId = useId();
   const slugId = useId();
   const errorId = useId();
-  const { dialog, name, setName, slug, nameError, isLoading, closeDialog, submit, triggerRef } = state;
+  const { dialog, name, setName, slug, roomId, nameError, error, isLoading, closeDialog, submit, triggerRef } = state;
   const isDelete = dialog?.kind === "delete";
   const isRename = dialog?.kind === "rename";
   const title = isDelete ? "Delete Project" : isRename ? "Rename Project" : "Create Project";
@@ -71,12 +72,13 @@ export function ProjectDialogsProvider({ children }: ProjectDialogsProviderProps
                 {nameError && <p id={errorId} role="alert" className="text-sm text-error">{nameError}</p>}
                 {!isRename && (
                   <p id={slugId} className="min-w-0 text-sm text-copy-muted">
-                    Slug: <output className="break-all font-mono text-copy-secondary" aria-live="polite">{slug || "—"}</output>
+                    Room ID: <output className="break-all font-mono text-copy-secondary" aria-live="polite">{roomId || "—"}</output>
                   </p>
                 )}
               </div>
             )}
 
+            {error && <p role="alert" className="text-sm text-error">{error}</p>}
             <DialogFooter className="rounded-b-3xl border-surface-border bg-surface">
               <Button type="button" variant="outline" onClick={closeDialog} disabled={isLoading} className="rounded-xl">Cancel</Button>
               <Button type="submit" variant={isDelete ? "destructive" : "default"} disabled={isLoading || (!isDelete && !slug)} className="rounded-xl">

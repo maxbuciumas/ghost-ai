@@ -1,11 +1,12 @@
 "use client";
 
 import { FolderOpen, Pencil, Plus, Trash2, Users, X } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import type { MockProject } from "@/lib/mock-projects";
+import type { SidebarProject } from "@/lib/project-types";
 import { useProjectDialogContext } from "@/components/editor/project-dialogs-provider";
 
 interface ProjectSidebarProps {
@@ -14,9 +15,7 @@ interface ProjectSidebarProps {
 }
 
 export function ProjectSidebar({ isOpen, onClose }: ProjectSidebarProps) {
-  const { projects, openCreate, openRename, openDelete } = useProjectDialogContext();
-  const ownedProjects = projects.filter((project) => project.isOwner);
-  const sharedProjects = projects.filter((project) => !project.isOwner);
+  const { ownedProjects, sharedProjects, openCreate, openRename, openDelete } = useProjectDialogContext();
 
   return (
     <>
@@ -100,9 +99,9 @@ export function ProjectSidebar({ isOpen, onClose }: ProjectSidebarProps) {
 }
 
 interface ProjectListProps {
-  projects: MockProject[];
-  onRename: (project: MockProject) => void;
-  onDelete: (project: MockProject) => void;
+  projects: SidebarProject[];
+  onRename: (project: SidebarProject) => void;
+  onDelete: (project: SidebarProject) => void;
 }
 
 function ProjectList({ projects, onRename, onDelete }: ProjectListProps) {
@@ -110,10 +109,10 @@ function ProjectList({ projects, onRename, onDelete }: ProjectListProps) {
     <ul className="space-y-2 pb-4">
       {projects.map((project) => (
         <li key={project.id} className="flex items-center gap-2 rounded-xl bg-elevated p-3">
-          <div className="min-w-0 flex-1">
+          <Link href={`/editor/${encodeURIComponent(project.id)}`} className="min-w-0 flex-1 rounded-xl focus-visible:outline-2 focus-visible:outline-brand">
             <p className="truncate text-sm font-medium text-copy-primary" title={project.name}>{project.name}</p>
-            <p className="truncate font-mono text-xs text-copy-muted" title={project.slug}>{project.slug}</p>
-          </div>
+            <p className="truncate font-mono text-xs text-copy-muted" title={project.id}>{project.id}</p>
+          </Link>
           {project.isOwner && (
             <div className="flex shrink-0 items-center gap-1">
               <Button type="button" variant="ghost" size="icon-sm" className="rounded-xl text-copy-muted" aria-label={`Rename ${project.name}`} onClick={() => onRename(project)}>
