@@ -1,16 +1,17 @@
 import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
+import { EditorHome } from "@/components/editor/editor-home";
 
-async function EditorCanvas() {
+async function AuthenticatedEditorHome() {
   await auth.protect();
 
-  return null;
+  return <EditorHome />;
 }
 
 export default function EditorPage() {
   return (
     <Suspense fallback={null}>
-      <EditorCanvas />
+      <AuthenticatedEditorHome />
     </Suspense>
   );
 }
