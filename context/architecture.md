@@ -31,6 +31,9 @@
 
 ## Auth and Collaboration Model
 
+- The root layout provides Clerk with a token-based dark theme. Public sign-in/sign-up pages share `app/(auth)/layout.tsx`; the workspace shell lives in `app/editor/layout.tsx`.
+- Root `proxy.ts` protects application routes by default, exempting only the configured Clerk sign-in/sign-up paths and their child paths. Framework assets are excluded from its matcher. Protected resources also check authentication where they execute; the editor page uses `auth.protect()`.
+- `/` redirects authenticated users to `/editor` and unauthenticated users to the configured sign-in path. Clerk's built-in user menu handles profile settings and logout.
 - Every project has a single owner (Clerk user ID).
 - Projects can include additional collaborators.
 - Only authenticated users can access protected routes.

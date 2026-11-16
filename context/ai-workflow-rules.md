@@ -56,5 +56,5 @@ Progress state must reflect the actual state of the implementation, not the inte
 ## Before Moving To The Next Unit
 
 1. The current unit works end to end within its defined scope.
-2. No invariant defined in `architecture-context.md` was violated.
+2. No invariant defined in `architecture.md` was violated.
 3. `progress-tracker.md` reflects the completed work.
