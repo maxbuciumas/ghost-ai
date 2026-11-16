@@ -5,14 +5,21 @@ change.
 
 ## Current Phase
 
-- Complete: auth UI refinement from the supplied screenshot.
+- Complete: editor home and project context dialogs (`feature-specs/04-context-dialogs.md`).
 
 ## Current Goal
 
-- Auth pages match the supplied layout direction: 50/50 desktop panels, a subtly cyan-tinted left side, compact feature rows, and the documented Geist fonts.
+- Editor home, create/rename/delete dialogs, owned-project sidebar actions, and mobile sidebar backdrop are implemented using mock data only.
 
 ## Completed
 
+- Fixed project-name validation: create and rename reject names that normalize to an empty slug, including punctuation-only/unsupported-character-only input. The form shows an accessible inline error and disables submission; the hook also rejects invalid submission directly.
+- Validation regression checks passed: TypeScript, ESLint, production build, and isolated browser tests for `___`, `---`, punctuation, whitespace, emoji-only and unsupported-script-only names, direct form submission, rename Enter submission, valid-name recovery, and unaffected delete confirmation.
+- Implemented the exact editor home heading and description with a Plus/New Project button and no enclosing card, reusing the editor layout and retaining the page's server-side auth check.
+- Added `hooks/use-project-dialogs.ts` for dialog, form, transition/loading, focus-return, and in-memory mock project state; `ProjectDialogsProvider` shares it between the home and sidebar.
+- Added Create Project with a live normalized slug preview; Rename Project with current-name description, prefilled/autofocused input, and Enter submission; Delete Project with no input and a destructive confirm action.
+- Wired both New Project entry points and owned-project rename/delete controls. Shared mock projects have no mutation actions. Mobile outside taps on the new scrim close the sidebar; navbar and desktop sidebar behavior are preserved.
+- Verified with TypeScript, ESLint, and a production build. Headless Chrome checks against an isolated harness of the actual editor components passed create/slug/blank validation, rename prefill/focus/Enter/cancel, destructive delete, shared-project restrictions, Escape/focus return, empty states, reload reset, mobile scrim, dialog bounds, and keyboard focus trapping. Only Clerk's avatar was stubbed in that harness; application authentication was unchanged. No project API calls were observed.
 - Refined both auth pages using the supplied screenshot: equal-width full-height desktop panels, a flat brand-tinted left surface, branding at the top, three compact feature rows, copyright at the bottom, and a centered 448px Clerk form. Mobile remains form-only.
 - Added `--bg-auth-panel`/`bg-auth-panel`, explicit Geist Sans for body and Clerk buttons, and Geist Mono for code text. Configured Clerk's CSS cascade layer so Tailwind form sizing overrides apply correctly.
 - Verified the auth UI in headless Chrome at 1440×900 and 375×812: exact 720px desktop panels, distinct nontransparent backgrounds, correct computed Geist families, readable feature labels, 448px desktop cards, no desktop scrolling or mobile horizontal overflow, and no runtime errors. ESLint and the production build (including TypeScript) pass.
@@ -45,12 +52,13 @@ change.
 
 ## Open Questions
 
-- None blocking the editor chrome unit. Project creation behavior remains deferred to its feature spec.
+- No blocking questions for this mock UI unit. Real project APIs, persistence, and project workspace navigation remain outside this spec.
 
 ## Architecture Decisions
 
+- For this unit, create/rename/delete update a local mock project collection only and reset on reload. No API calls, database changes, or browser persistence are introduced. Project names are trimmed and must produce a nonempty slug; slug previews use lowercase ASCII letters/digits separated by hyphens.
 - Use the generated shadcn/ui Radix Nova primitives unchanged; map their semantic CSS variables to the documented dark palette so app-level styling stays consistent.
-- Keep editor composition in `components/editor/`; reuse the existing shadcn primitives unchanged. New Project is disabled until its creation flow is implemented.
+- Keep editor composition in `components/editor/`; reuse the existing shadcn primitives unchanged. New Project now opens the local mock Create Project dialog.
 - Keep shared sidebar state in `EditorShell`. Defer a shared dialog wrapper until actual dialog usage establishes its requirements.
 - Default protection in `proxy.ts` implements the auth spec; resources also enforce authentication where they execute. Future protected pages, handlers, and Server Actions must perform their own auth and authorization checks.
 
@@ -59,7 +67,7 @@ change.
 - The running development server retained old CSS token definitions during this change. The fresh production build and browser screenshots verify the new tint and sizing; restart the development server to pick up all CSS changes.
 - Avoid using `text-base` as a font-size class in the auth layout: the app's `base` color token also resolves that utility to a text color. Use `text-[1rem]` when specifying that font size.
 - The design system unit is complete. Existing unrelated working-tree changes are preserved.
-- The editor shell reserves the canvas area; canvas behavior and actual dialogs are outside this unit. Sidebar transitions respect reduced motion, and closed sidebar content is inert.
+- The editor shell reserves the canvas area; real canvas behavior remains deferred. Project dialogs are now implemented for the mock UI unit. Sidebar transitions respect reduced motion, and closed sidebar content is inert.
 - Auth URL configuration resolved with user approval: added standard `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in` and `NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up` to ignored `.env.local`; existing keys were preserved and no new redirect env vars were introduced.
 - Account creation, credential submission, and signed-in account flows have not been exercised. Clerk development-mode document requests can initiate a browser handshake; the headless browser checks completed that handshake and verified signed-out navigation.
 - The reported provider error could not be reproduced after a fresh development-server start. Stale development state after dependency installation is a possible cause, not a confirmed diagnosis. Restart the dev server and reload the browser if an older session still shows the error; telemetry and development-key notices are informational.

@@ -40,6 +40,12 @@
 - Only the owner or a collaborator can mutate project resources.
 - Liveblocks room tokens are issued only after verifying project membership.
 
+## Mock Project Dialogs
+
+- The editor home and sidebar share a client-side project dialog provider. A dedicated `hooks/use-project-dialogs.ts` hook owns dialog, form, loading, and temporary mock collection state.
+- Create, rename, and delete only update mock projects in memory. Reloading restores the fixtures; no requests or persistence are used for these operations.
+- Owned mock projects expose rename/delete actions; collaborator projects do not. These UI checks are not a substitute for future server authorization.
+
 ## Starter System Designs
 
 - Prebuilt templates are static canvas snapshots stored in the codebase.
