@@ -103,7 +103,8 @@ shadcn/ui on top of Tailwind. No custom design system. Components live in `compo
 ### Editor Chrome Composition
 
 - `components/editor/editor-shell.tsx` owns sidebar visibility and keeps the canvas full-size beneath the floating sidebar.
-- `EditorNavbar` accepts `isSidebarOpen`, `onToggleSidebar`, and optional center content; its right section is reserved and empty.
+- `app/editor/layout.tsx` composes `EditorShell` around editor page content; public auth pages use a separate layout.
+- `EditorNavbar` accepts `isSidebarOpen`, `onToggleSidebar`, and optional center content; its right section contains Clerk's default `UserButton`.
 - `ProjectSidebar` accepts `isOpen` and `onClose`. New Project is a disabled placeholder until project creation is implemented.
 - Keep three editor components: `EditorNavbar`, `ProjectSidebar`, and `EditorShell`. Defer a shared dialog wrapper until an actual dialog needs it.
 
@@ -116,6 +117,15 @@ For the first feature dialog, compose the existing shadcn primitives directly:
 - Put `DialogTitle` and `DialogDescription` inside `DialogHeader`; use `text-copy-muted` for the description.
 - Put action buttons inside `DialogFooter`, styled with `rounded-b-3xl border-surface-border bg-surface`.
 - Keep the generated primitives unchanged. No actual dialogs are built in the editor chrome unit.
+
+## Authentication Pages
+
+- Clerk's `dark` theme from `@clerk/ui/themes` is the base; appearance variables reference the existing app colors, fonts, and radius tokens.
+- Large screens use equal-width (50/50) panels: a flat, subtly cyan-tinted `bg-auth-panel` on the left and `bg-base` on the right. The left panel has compact branding at the top, a tagline with three icon-and-description feature rows in the middle, and copyright at the bottom. Center the Clerk form in the right panel.
+- `--bg-auth-panel` mixes the existing brand accent into the surface color. Keep the tint flat and restrained; feature rows have no enclosing cards.
+- Explicitly apply Geist Sans to body text and Clerk buttons; apply Geist Mono to code, preformatted text, and keyboard samples. Put Clerk styles in the `clerk` cascade layer before app utilities so form sizing utilities work consistently.
+- Small screens show the form only. Use flat token-based surfaces without gradients, hero sections, or feature cards.
+- Keep Clerk's default user menu and profile flows intact.
 
 ## Icons
 
